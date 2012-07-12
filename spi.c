@@ -1,6 +1,7 @@
 //#include <io.h>
 #include "spi.h"
 #include "msp430.h"
+#include <stdint.h>
 /** \file spi.c
 SPI functions are either on here or in spi.h.
 */
@@ -41,28 +42,25 @@ return UCB0RXBUF; // reading clears RXIFG flag
  
 }
 
-void spiTxINT(unsigned int i) {
+void spiTxINT(uint16_t i) {
 unsigned char rxTrash;
-unsigned char msb;
-unsigned char lsb;
-lsb=i;
-msb=(i>>8);
-//while (UCB0STAT & UCBUSY);
+uint8_t lsb=0;
+uint8_t msb=0;
+__no_operation();
+lsb=i&0xFF;
+msb=(i>>8)&0xFF;
 while (!(UC0IFG & UCB0TXIFG));
 UCB0TXBUF = msb;
 while (!(UC0IFG & UCB0TXIFG));
-//while (UCB0STAT & UCBUSY);
-while (!(UC0IFG & UCB0RXIFG));
 rxTrash = UCB0RXBUF;
 UCB0TXBUF = lsb;
-
-while (!(UC0IFG & UCB0RXIFG));
 rxTrash = UCB0RXBUF;
 } 
 
 unsigned char spiRx()
 {
 unsigned char blah;
+UCB0TXBUF =0xff;
 blah = UCB0RXBUF;
 return blah;
 }

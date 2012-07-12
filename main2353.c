@@ -111,13 +111,13 @@ spiStop();
 spiStart();
 
 //see if this helps as this should initialize the chip
-__no_operation(); 
+//__no_operation(); 
 __no_operation(); 
 enablePin(CS,MYPORT);
-__no_operation(); 
+//__no_operation(); 
 __no_operation(); 
 disablePin(CS,MYPORT);
-__no_operation(); 
+//__no_operation(); 
 __no_operation(); 
 //statusRg = readStatusReg(CS, MYPORT, RDSR);//This function just does a read so should work with both status RDSR and RDID 
 
@@ -131,6 +131,7 @@ while(1){
 			setpins(0x1);}
 		else
 			{blinkfun();
+			myData = readPageMemLoc(500,CS,MYPORT);
 			S2 = 0;}
 		break;
 	case 2 :
@@ -138,18 +139,22 @@ while(1){
 			setpins(0x2);}	
 		else
 			{blinkfun();
-			enablePin(CS,MYPORT);
-			__no_operation(); 
-			__no_operation(); 
-			spiTx(WREN); //init the write enable
+			myData = readPageMemLoc(500,CS,MYPORT);
+			//enablePin(CS,MYPORT);
+//			__no_operation(); 
+//			__no_operation(); 
+			//spiTx(WREN); //init the write enable
 			//writeStatusReg(CS, MYPORT, WRSR,0xC);
-			P2OUT ^=0x4;
-			__no_operation(); 
-			__no_operation(); 
-			disablePin(CS,MYPORT);
-			delay(50);
+//			P2OUT ^=0x4;
+//			__no_operation(); 
+//			__no_operation(); 
+			//disablePin(CS,MYPORT);
+			wrtiePageLoc(500, 55, CS ,MYPORT);
+			while(readStatusReg(CS, MYPORT, RDSR)&0x01==0x01){};
+			delay(5);
 			//while(readStatusReg(CS, MYPORT, RDSR)&0x01==0x01){};
-			statusRg = readStatusReg(CS, MYPORT, RDSR);//This function just does a read so should work with both status RDSR and RDID
+			myData = readPageMemLoc(500,CS,MYPORT);
+			//statusRg = readStatusReg(CS, MYPORT, RDSR);//This function just does a read so should work with both status RDSR and RDID
 			P2OUT ^=0x4;
 			S2 = 0;}
 		break;
@@ -158,6 +163,7 @@ while(1){
 			setpins(0x3);
 		else
 			{blinkfun();
+			readStatusReg(CS, MYPORT, RDSR);
 			S2 = 0;}
 		break;
 	case 4 :
@@ -165,6 +171,7 @@ while(1){
 			setpins(S2);
 		else
 			{blinkfun();
+			writeStatusReg(CS, MYPORT, WRSR,0x00);
 			S2 = 0;}
 		break;
 	case 5 :
@@ -192,25 +199,6 @@ while(1){
 	default :
 	counter = 0;
 	}
-	
-		/*	
-	    if (toggler == 0)
-		{
-			while((BIT3 & P2IN) == 0x0){
-			P2OUT |=0x01;
-			delay(200);
-			P2OUT &= ~0x01;
-			delay(200);
-			}
-		toggler = 1;
-		}
-		else
-		{P2OUT |=0x03;
-		delay(200);
-		P2OUT &= ~0x03;
-		toggler = 0;
-		}
-		*/
 	}
 	blinky = 0;
 	//S2 = 0;
@@ -243,14 +231,5 @@ _low_power_mode_off_on_exit();
 __interrupt void USCIAB0RX_ISR(void)
 {
 rxbuff = UCB0RXBUF;
-//_low_power_mode_off_on_exit();
-//blinkfun();
-}
-
-#pragma vector = USCIAB0TX_VECTOR
-__interrupt void USCIAB0TX_ISR(void)
-{
-//rxbuff = UCB0RXBUF;
 _low_power_mode_off_on_exit();
-//blinkfun();
 }

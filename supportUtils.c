@@ -1,6 +1,11 @@
 
 #include "msp430.h"
 
+void WD_intervalTimerInit(void)
+{
+  WDTCTL = WDT_ADLY_1000;                    // WDT 250ms, ACLK, interval timer
+  IE1 |= WDTIE;                             // Enable WDT interrupt
+}
 void delay(unsigned int ms)
 {
  while (ms--)
@@ -21,27 +26,40 @@ unsigned char counterLoop=0;
 	}
 	counterLoop = 0;
 }
-void blinkfun()
-{   P2OUT |=0x1;
+void blinkbit(unsigned char bits, unsigned char time){
+    P2OUT |=bits;
+	delay(time);
+	P2OUT &= ~bits;
+	delay(time);
+}
+void blinkfun(){
+	blinkbit(BIT1, 100);
+	blinkbit(BIT2, 100);
+	blinkbit(BIT4, 100);
+	blinkbit(BIT2, 100);
+	blinkbit(BIT1, 100);
+}
+/*
+void blinkfun(){
+    P2OUT |=BIT1;
 	delay(200);
-	P2OUT &= ~0x1;
+	P2OUT &= ~BIT1;
 	delay(200);
-    P2OUT |=0x2;
+    P2OUT |=BIT2;
 	delay(200);
-	P2OUT &= ~0x2;
+	P2OUT &= ~BIT2;
 	delay(200);
-    P2OUT |=0x4;
+    P2OUT |=BIT4;
 	delay(200);
-	P2OUT &= ~0x4;
+	P2OUT &= ~BIT4;
 	delay(200);
-    P2OUT |=0x2;
+    P2OUT |=BIT2;
 	delay(200);
-	P2OUT &= ~0x2;
+	P2OUT &= ~BIT2;
 	delay(200);
-    P2OUT |=0x1;
+    P2OUT |=BIT1;
 	delay(200);
-	P2OUT &= ~0x1;
+	P2OUT &= ~BIT1;
 	delay(200);
-	
-	
-	}
+}
+*/
