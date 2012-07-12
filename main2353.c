@@ -141,9 +141,8 @@ while(1){
 			enablePin(CS,MYPORT);
 			__no_operation(); 
 			__no_operation(); 
-			//spiTx(WREN); //init the write enable
-			writeStatusReg(CS, MYPORT, WRSR,0xC);//problem could be around here but so far setting a breakpoint here and at the
-			//statusread then stepping through statusread seems to allow for data to be read on the rdsr....testing busy rdsr
+			spiTx(WREN); //init the write enable
+			//writeStatusReg(CS, MYPORT, WRSR,0xC);
 			P2OUT ^=0x4;
 			__no_operation(); 
 			__no_operation(); 

@@ -14,7 +14,7 @@ Uses SMCLK with divide set to 2 (ie maximum speed). Interrupts disabled.
 void spiInit(void) {
 	UCB0CTL0 = UCMODE_0 + UCMST + UCMSB + UCCKPH;
 	UCB0CTL1 = UCSSEL_2 + UCSWRST;			  //smclk
-	UCB0BR0 =2; //60                         // /2
+	UCB0BR0 =2; //60 does not work
     UCB0BR1 = 0;
     //UCB0STAT = UCLISTEN;    //test loopback....which does work...  :/
 }
@@ -31,7 +31,6 @@ UCB0CTL1 |= UCSWRST;
 unsigned char spiTx(unsigned char c) {
 //UCB0TXBUF = c;
 P2OUT ^=0x1;
-__no_operation(); 
 while (!(IFG2 & UCB0TXIFG)); // wait for previous tx to complete
 UCB0TXBUF = c; // setting TXBUF clears the TXIFG flag
 while (!(IFG2 & UCB0TXIFG)); // wait for previous tx to complete
