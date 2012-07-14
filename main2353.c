@@ -47,18 +47,24 @@
 //SI	P1.7
 //SO	P1.6
 //CLK 	P1.5
- 
-unsigned char S1 = 0; //button1/action  Also used as reset button when switch is enabled
-unsigned char S2 = 0; //button2/iterator
-unsigned char toggler = 0x0;
-unsigned char blinky = 0x0;
-unsigned char j=0;
-unsigned char myData=0;
-unsigned char counter = 0;
 unsigned char MYPORT = 2;
+ 
+unsigned short S1 = 0; //button1/action  Also used as reset button when switch is enabled
+unsigned short S2 = 0; //button2/iterator
+unsigned char blinky = 0x0;
+unsigned char myData=0;
 unsigned char statusRg = 0xff;
 unsigned char rxbuff;
-//volatile unsigned int i; 
+unsigned short doConversion =0;
+unsigned short isPaused = 0;
+unsigned int memCounter = 0;
+unsigned long temp = 0;      
+unsigned long IntDegF = 0;
+
+//unsigned char toggler = 0x0;
+//unsigned char counter = 0;
+//unsigned char j=0;
+//volatile unsigned int i;
 void delay(unsigned int ms);
 
 
@@ -110,16 +116,12 @@ spiInit();
 spiStop();
 spiStart();
 
-//see if this helps as this should initialize the chip
-//__no_operation(); 
+//Init CS port for eeprom
 __no_operation(); 
 enablePin(CS,MYPORT);
-//__no_operation(); 
 __no_operation(); 
 disablePin(CS,MYPORT);
-//__no_operation(); 
 __no_operation(); 
-//statusRg = readStatusReg(CS, MYPORT, RDSR);//This function just does a read so should work with both status RDSR and RDID 
 
 while(1){
 	if (blinky ==1){
@@ -131,7 +133,8 @@ while(1){
 			setpins(0x1);}
 		else
 			{blinkfun();
-			myData = readPageMemLoc(500,CS,MYPORT);
+			myData = readPageMemLoc(2,CS,MYPORT);
+			readStatusReg(CS, MYPORT, RDSR);
 			S2 = 0;}
 		break;
 	case 2 :
@@ -162,8 +165,24 @@ while(1){
 		if (S1 == 0)	
 			setpins(0x3);
 		else
-			{blinkfun();
-			readStatusReg(CS, MYPORT, RDSR);
+			{blinkfun();//this area is for troubleshooting the interval timer...need more looking at since it seems to have
+				//some odd issues with the aclock modes.
+			doConversion = 3;
+				while (doConversion == 3){
+				//stop WDT here
+				WDTCTL = WDTPW + WDTHOLD;
+				//
+				if (isPaused ==1){
+					//__bis_SR_register_on_exit(LPM0_bits);
+					_low_power_mode_0(); 
+					//go to lpm until the next int
+					}
+				WD_intervalTimerInit();
+				//go to LMP and wait for loop to restart
+				//__bis_SR_register_on_exit(LPM0_bits);
+				_low_power_mode_0(); 
+				endBlink(1);
+				}
 			S2 = 0;}
 		break;
 	case 4 :
@@ -171,7 +190,46 @@ while(1){
 			setpins(S2);
 		else
 			{blinkfun();
-			writeStatusReg(CS, MYPORT, WRSR,0x00);
+			//Button loop logic
+			//two new vars
+			//unsigned char doConversion =0;
+			//unsigned char isPaused = 0;
+			//Enable ADC here
+			doConversion = 3;
+			
+				while (doConversion == 3){
+				//stop WDT here
+				WDTCTL = WDTPW + WDTHOLD;
+				//
+				if (isPaused ==1){
+					//__bis_SR_register_on_exit(LPM0_bits);
+					_low_power_mode_0(); 
+					//go to lpm until the next int
+					}
+				__no_operation();
+				__no_operation();
+				//do conversion here
+				ADC10CTL1 |= (INCH_10 + ADC10DIV_3);         // Temp Sensor ADC10CLK/4
+  				ADC10CTL0 |= (SREF_1 + ADC10SHT_3 + REFON + ADC10ON + ADC10IE);
+				//go to LMP and wait for int
+				//__bis_SR_register_on_exit(LPM0_bits);
+
+				__no_operation();
+				ADC10CTL0 |= ENC + ADC10SC;
+				_low_power_mode_0();
+				
+				//do post processing of data and save to memChip.
+				//turn on wdt interval timer.
+				//__no_operation();
+				WD_intervalTimerInit();
+				//go to LMP and wait for loop to restart
+				//__bis_SR_register_on_exit(LPM0_bits);
+				_low_power_mode_0(); 
+				endBlink(1);
+				}//end loop
+			//Disable ADC here
+			ADC10CTL0 &= ~(ENC + ADC10SC);
+				endBlink(10);
 			S2 = 0;}
 		break;
 	case 5 :
@@ -197,13 +255,14 @@ while(1){
 		break;
 		
 	default :
-	counter = 0;
+	//counter = 0;
+	__no_operation();
 	}
 	}
 	blinky = 0;
 	//S2 = 0;
 	S1 = 0;
-_BIS_SR(LPM0_bits + GIE); // Enter LPM4 w/interrupt
+_BIS_SR(LPM0_bits + GIE); // Enter LPM0 w/interrupt
 }
 }
 
@@ -211,16 +270,29 @@ _BIS_SR(LPM0_bits + GIE); // Enter LPM4 w/interrupt
 #pragma vector=PORT2_VECTOR
 __interrupt void Port_2(void)
 {
-
+/*
+			thought about this some, maybe the isPaused flag should be set in the INT and checked in the while loop 
+			if (isPaused == 1) {//then Disable ADC and WDT invertval timer to save power.}
+			//if adding this to the while loop, this could go after the wdt is stopped as a sanity check on the var.
+			else
+			{check the status of adc(is it on and ready for conversion)?
+			if off, then turn on adc and give it x time to get settled.}
+			This should actually work out very well.	
+ * 
+ */
 if((0x08 & P2IFG)==0x08) 
 { if(S2>=7)
 	{S2=0;}
 	else 
 	{S2 +=1;}
+	doConversion = 1; //testing this out as a temp reset measure.
 }
 
 if((P2IFG & 0x20)==0x20) 
 {S1 = 1;}
+if (doConversion == 3){
+ isPaused ^= 1;
+ }
 blinky = 1;
 P2IFG &= ~0x08; // P2.3 IFG cleared
 P2IFG &= ~0x20; // P2.5 IFG cleared
@@ -232,4 +304,30 @@ __interrupt void USCIAB0RX_ISR(void)
 {
 rxbuff = UCB0RXBUF;
 _low_power_mode_off_on_exit();
+}
+
+#pragma vector=WDT_VECTOR
+__interrupt void watchdog_timer(void)
+{	
+	__no_operation();
+ 	_low_power_mode_off_on_exit();
+}
+
+#pragma vector=ADC10_VECTOR
+__interrupt void adc10_tempGetter(void)
+{if (memCounter > 4096)//was MAXMEM
+	{//WDTCTL = WDTPW + WDTHOLD; // Stop watchdog timer
+	doConversion = 0;
+	_low_power_mode_off_on_exit();
+	}
+else{
+    temp = ADC10MEM;
+    IntDegF = ((temp - 630) * 761) / 1024;
+//	P1IFG &= ~0x08; // P1.3 IFG cleared 
+	wrtiePageLoc(memCounter, IntDegF, CS ,MYPORT);
+	//keep looping until register no longer shows write active.
+	while(readStatusReg(CS, MYPORT, RDSR)&0x01==0x01){}; 
+	memCounter++;
+	_low_power_mode_off_on_exit();
+	}
 }
