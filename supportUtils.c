@@ -3,7 +3,7 @@
 
 void WD_intervalTimerInit(void)
 {
-  WDTCTL = WDT_ADLY_1000;                    // WDT 250ms, ACLK, interval timer
+  WDTCTL = WDT_MDLY_32;                    // WDT 250ms, ACLK, interval timer
   IE1 |= WDTIE;                             // Enable WDT interrupt
 }
 void delay(unsigned int ms)
@@ -14,24 +14,29 @@ void delay(unsigned int ms)
     }
 }
 
-void setpins(unsigned char pins){
-//do something here
-unsigned char counterLoop=0;
-	while(counterLoop < 3){
-	P2OUT |=pins;
-	delay(200);
-	P2OUT &= ~pins;
-	delay(200);
-	counterLoop++;
-	}
-	counterLoop = 0;
-}
 void blinkbit(unsigned char bits, unsigned char time){
     P2OUT |=bits;
 	delay(time);
 	P2OUT &= ~bits;
 	delay(time);
 }
+
+void setpins(unsigned char pins){
+//This does a blink based on the button press
+unsigned char counterLoop=0;
+	while(counterLoop < 3){
+	/*
+	P2OUT |=pins;
+	delay(200);
+	P2OUT &= ~pins;
+	delay(200);
+	*/
+	blinkbit(pins, 150);
+	counterLoop++;
+	}
+	counterLoop = 0;
+}
+
 void blinkfun(){
 	blinkbit(BIT1, 100);
 	blinkbit(BIT2, 100);
@@ -39,27 +44,13 @@ void blinkfun(){
 	blinkbit(BIT2, 100);
 	blinkbit(BIT1, 100);
 }
-/*
-void blinkfun(){
-    P2OUT |=BIT1;
-	delay(200);
-	P2OUT &= ~BIT1;
-	delay(200);
-    P2OUT |=BIT2;
-	delay(200);
-	P2OUT &= ~BIT2;
-	delay(200);
-    P2OUT |=BIT4;
-	delay(200);
-	P2OUT &= ~BIT4;
-	delay(200);
-    P2OUT |=BIT2;
-	delay(200);
-	P2OUT &= ~BIT2;
-	delay(200);
-    P2OUT |=BIT1;
-	delay(200);
-	P2OUT &= ~BIT1;
-	delay(200);
+void endBlink(int interval){
+char i = 0;
+	while (i < interval){
+	blinkbit(BIT1, 250);
+	blinkbit(BIT4, 250);
+	i++;
+	}
 }
-*/
+
+
