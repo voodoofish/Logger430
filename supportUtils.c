@@ -47,8 +47,8 @@ void blinkfun(){
 void endBlink(int interval){
 char i = 0;
 	while (i < interval){
-	blinkbit(BIT1, 250);
-	blinkbit(BIT4, 250);
+	blinkbit(BIT1, 150);
+	blinkbit(BIT4, 150);
 	i++;
 	}
 }
