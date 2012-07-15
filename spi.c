@@ -17,12 +17,11 @@ void spiInit(void) {
 	UCB0CTL1 = UCSSEL_2 + UCSWRST;			  //smclk
 	UCB0BR0 =2; //60 does not work
     UCB0BR1 = 0;
-    //UCB0STAT = UCLISTEN;    //test loopback....which does work...  :/
-}
+    }
 
 void spiStart(void){
 	UCB0CTL1 &= ~UCSWRST; 
-	IE2 |= (UCB0RXIE);                          // Enable USCI0 RX interrupt  
+//	IE2 |= (UCB0RXIE);                          // Enable USCI0 RX interrupt  
 }
 
 void spiStop(void){
@@ -30,19 +29,17 @@ UCB0CTL1 |= UCSWRST;
 }
 
 unsigned char spiTx(unsigned char c) {
-//UCB0TXBUF = c;
 P2OUT ^=0x1;
 while (!(IFG2 & UCB0TXIFG)); // wait for previous tx to complete
 UCB0TXBUF = c; // setting TXBUF clears the TXIFG flag
 while (!(IFG2 & UCB0TXIFG)); // wait for previous tx to complete
 P2OUT ^=0x2;
-//while (!(UC0IFG & UCB0RXIFG)); // wait for an rx character?
 return UCB0RXBUF; // reading clears RXIFG flag
 //__bis_SR_register(LPM0_bits + GIE);
  
 }
 
-void spiTxINT(uint16_t i) {
+unsigned char spiTxINT(uint16_t i) {
 unsigned char rxTrash;
 uint8_t lsb=0;
 uint8_t msb=0;
@@ -51,18 +48,20 @@ lsb=i&0xFF;
 msb=(i>>8)&0xFF;
 while (!(UC0IFG & UCB0TXIFG));
 UCB0TXBUF = msb;
-while (!(UC0IFG & UCB0TXIFG));
+while (!(UC0IFG & UCB0RXIFG));
 rxTrash = UCB0RXBUF;
 UCB0TXBUF = lsb;
+while (!(UC0IFG & UCB0RXIFG));
 rxTrash = UCB0RXBUF;
+return rxTrash;
 } 
 
 unsigned char spiRx()
 {
 unsigned char blah;
 UCB0TXBUF =0xff;
-blah = UCB0RXBUF;
-return blah;
+while (!(UC0IFG & UCB0RXIFG));
+return UCB0RXBUF;
 }
 //Enter the port pin and port...ex pin 4 on port 2
 void enablePin(unsigned char bits,unsigned char ports)

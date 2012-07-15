@@ -17,7 +17,7 @@ param c - byte to send to SPI.
 void spiStart(void);
 void spiStop(void);
 unsigned char spiTx(unsigned char c);
-void spiTxINT(unsigned int i);
+unsigned char spiTxINT(unsigned int i);
 unsigned char spiRx();
 void enablePin( unsigned char bits,unsigned char ports );
 void disablePin( unsigned char bits, unsigned char ports );
