@@ -53,6 +53,7 @@ unsigned short S1 = 0; //button1/action  Also used as reset button when switch i
 unsigned short S2 = 0; //button2/iterator
 unsigned char blinky = 0x0;
 unsigned char myData=0;
+unsigned char myStatus=0;
 unsigned char statusRg = 0xff;
 unsigned char rxbuff;
 unsigned short doConversion =0;
@@ -65,14 +66,20 @@ unsigned long IntDegF = 0;
 //unsigned char counter = 0;
 //unsigned char j=0;
 //volatile unsigned int i;
-void delay(unsigned int ms);
-
+//void delay(unsigned int ms);
+void serial_setup(unsigned out_mask, unsigned in_mask, unsigned duration);
+void putc(unsigned);
+void puts(char *);
+unsigned getc(void);
 
 void main(void)
 {
 //Configure buttons and CS	
 WDTCTL = WDTPW + WDTHOLD; // Stop watchdog timer
 
+	DCOCTL = 0;
+	BCSCTL1 = CALBC1_1MHZ;
+	DCOCTL = CALDCO_1MHZ;
 /* SEE NOTES AT BOTTOM of this blurb
  * I've run into a probem which has been solved by setting the two port pins P2.6 and P2.7 to IO pins at the start of the main function. 
  * Normally they are * set to be used as Xin and Xout and for all intents and purposes 
@@ -122,6 +129,8 @@ enablePin(CS,MYPORT);
 __no_operation(); 
 disablePin(CS,MYPORT);
 __no_operation(); 
+//serialPortFun
+serial_setup(BIT1, BIT2, 1000000 / 9600);
 
 while(1){
 	if (blinky ==1){
@@ -134,7 +143,7 @@ while(1){
 		else
 			{blinkfun();
 			myData = readPageMemLoc(2,CS,MYPORT);
-			readStatusReg(CS, MYPORT, RDSR);
+			myStatus = readStatusReg(CS, MYPORT, RDSR);
 			S2 = 0;}
 		break;
 	case 2 :
@@ -237,6 +246,14 @@ while(1){
 			setpins(S2);
 		else
 			{blinkfun();
+			int count;
+			for(count =0;count<4096;count++ ){
+			blinkbit(BIT1,10);
+			myData = readPageMemLoc(count,CS,MYPORT);
+			puts("\r\nA:");
+			//membyte = 82;
+			putc(myData);
+			}
 			S2 = 0;}
 		break;
 	case 6 :
@@ -298,7 +315,7 @@ P2IFG &= ~0x08; // P2.3 IFG cleared
 P2IFG &= ~0x20; // P2.5 IFG cleared
 _low_power_mode_off_on_exit();
 }
-
+//turn this off or don't use it atm.
 #pragma vector = USCIAB0RX_VECTOR
 __interrupt void USCIAB0RX_ISR(void)
 {
