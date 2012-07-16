@@ -234,7 +234,7 @@ while(1){
 				//go to LMP and wait for loop to restart
 				//__bis_SR_register_on_exit(LPM0_bits);
 				_low_power_mode_0(); 
-				endBlink(1);
+				blinkbit(BIT1,100);
 				}//end loop
 			//Disable ADC here
 			ADC10CTL0 &= ~(ENC + ADC10SC);
@@ -247,7 +247,7 @@ while(1){
 		else
 			{blinkfun();
 			int count;
-			for(count =0;count<4096;count++ ){
+			for(count =0;count<MAXMEM;count++ ){
 			blinkbit(BIT1,10);
 			myData = readPageMemLoc(count,CS,MYPORT);
 			puts("\r\nA:");
@@ -261,6 +261,10 @@ while(1){
 			setpins(S2);
 		else
 			{blinkfun();
+			puts("\r\nA:");
+			putc(2);
+			putc(58);
+			putc(125);
 			S2 = 0;}
 		break;
 	case 7 :
@@ -332,7 +336,7 @@ __interrupt void watchdog_timer(void)
 
 #pragma vector=ADC10_VECTOR
 __interrupt void adc10_tempGetter(void)
-{if (memCounter > 4096)//was MAXMEM
+{if (memCounter > MAXMEM)//was MAXMEM
 	{//WDTCTL = WDTPW + WDTHOLD; // Stop watchdog timer
 	doConversion = 0;
 	_low_power_mode_off_on_exit();
