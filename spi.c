@@ -29,12 +29,14 @@ UCB0CTL1 |= UCSWRST;
 }
 
 unsigned char spiTx(unsigned char c) {
-P2OUT ^=0x1;
+char foo;
+//P2OUT ^=0x1;
 while (!(IFG2 & UCB0TXIFG)); // wait for previous tx to complete
 UCB0TXBUF = c; // setting TXBUF clears the TXIFG flag
-while (!(IFG2 & UCB0TXIFG)); // wait for previous tx to complete
-P2OUT ^=0x2;
-return UCB0RXBUF; // reading clears RXIFG flag
+while (!(IFG2 & UCB0RXIFG)); // wait for previous tx to complete
+//P2OUT ^=0x2;
+foo = UCB0RXBUF; 
+return foo; // reading clears RXIFG flag
 //__bis_SR_register(LPM0_bits + GIE);
  
 }
@@ -50,6 +52,7 @@ while (!(UC0IFG & UCB0TXIFG));
 UCB0TXBUF = msb;
 while (!(UC0IFG & UCB0RXIFG));
 rxTrash = UCB0RXBUF;
+while (!(UC0IFG & UCB0TXIFG));
 UCB0TXBUF = lsb;
 while (!(UC0IFG & UCB0RXIFG));
 rxTrash = UCB0RXBUF;
@@ -59,9 +62,11 @@ return rxTrash;
 unsigned char spiRx()
 {
 unsigned char blah;
+while (!(UC0IFG & UCB0TXIFG));
 UCB0TXBUF =0xff;
 while (!(UC0IFG & UCB0RXIFG));
-return UCB0RXBUF;
+blah = UCB0RXBUF;
+return blah;
 }
 //Enter the port pin and port...ex pin 4 on port 2
 void enablePin(unsigned char bits,unsigned char ports)
