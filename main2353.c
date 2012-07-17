@@ -41,6 +41,7 @@
 #include "supportUtils.h"
 #include "spi.h"
 #include "25AA.h"
+#include <stdint.h>
 
 
 #define CS BIT4//p2.4
@@ -51,13 +52,14 @@ unsigned char MYPORT = 2;
  
 unsigned short S1 = 0; //button1/action  Also used as reset button when switch is enabled
 unsigned short S2 = 0; //button2/iterator
-unsigned char blinky = 0x0;
-unsigned char myData=0;
-unsigned char myStatus=0;
-unsigned char statusRg = 0xff;
-unsigned char rxbuff;
 unsigned short doConversion =0;
 unsigned short isPaused = 0;
+unsigned char blinky = 0x0;
+unsigned char myData=0x0;
+unsigned char myStatus=0x0;
+unsigned char statusRg = 0xff;
+unsigned char rxbuff;
+
 unsigned int memCounter = 0;
 unsigned long temp = 0;      
 unsigned long IntDegF = 0;
@@ -163,11 +165,11 @@ while(1){
 			//disablePin(CS,MYPORT);
 			wrtiePageLoc(500, 55, CS ,MYPORT);
 			while(readStatusReg(CS, MYPORT, RDSR)&0x01==0x01){};
-			delay(5);
+			//delay(5);
 			//while(readStatusReg(CS, MYPORT, RDSR)&0x01==0x01){};
 			myData = readPageMemLoc(500,CS,MYPORT);
 			//statusRg = readStatusReg(CS, MYPORT, RDSR);//This function just does a read so should work with both status RDSR and RDID
-			P2OUT ^=0x4;
+			//P2OUT ^=0x4;
 			S2 = 0;}
 		break;
 	case 3 :
@@ -235,7 +237,7 @@ while(1){
 				//__bis_SR_register_on_exit(LPM0_bits);
 				_low_power_mode_0(); 
 				blinkbit(BIT1,100);
-				}//end loop
+				} //end loop
 			//Disable ADC here
 			ADC10CTL0 &= ~(ENC + ADC10SC);
 				endBlink(10);
@@ -246,12 +248,11 @@ while(1){
 			setpins(S2);
 		else
 			{blinkfun();
-			int count;
-			for(count =0;count<MAXMEM;count++ ){
+			uint16_t count;
+			for(count=0;count<MAXMEM;count++ ){//MAXMEM
 			blinkbit(BIT1,10);
 			myData = readPageMemLoc(count,CS,MYPORT);
 			puts("\r\nA:");
-			//membyte = 82;
 			putc(myData);
 			}
 			S2 = 0;}
@@ -261,6 +262,7 @@ while(1){
 			setpins(S2);
 		else
 			{blinkfun();
+				//This case is being used for testing sending multple 8 bit and 10 bit bytes
 			puts("\r\nA:");
 			putc(2);
 			putc(58);
@@ -272,6 +274,9 @@ while(1){
 			setpins(S2);
 		else
 			{blinkfun();
+				chipErase(CS, MYPORT);
+				while(readStatusReg(CS, MYPORT, RDSR)&0x01==0x01){};
+				P2OUT |=0x1;
 			S2 = 0;}
 		break;
 		
@@ -336,7 +341,7 @@ __interrupt void watchdog_timer(void)
 
 #pragma vector=ADC10_VECTOR
 __interrupt void adc10_tempGetter(void)
-{if (memCounter > MAXMEM)//was MAXMEM
+{if (memCounter >= MAXMEM)//was MAXMEM
 	{//WDTCTL = WDTPW + WDTHOLD; // Stop watchdog timer
 	doConversion = 0;
 	_low_power_mode_off_on_exit();
