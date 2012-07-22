@@ -82,6 +82,7 @@ WDTCTL = WDTPW + WDTHOLD; // Stop watchdog timer
 	DCOCTL = 0;
 	BCSCTL1 = CALBC1_1MHZ;
 	DCOCTL = CALDCO_1MHZ;
+	BCSCTL3 |= LFXT1S_2; 					//use vloclk
 /* SEE NOTES AT BOTTOM of this blurb
  * I've run into a probem which has been solved by setting the two port pins P2.6 and P2.7 to IO pins at the start of the main function. 
  * Normally they are * set to be used as Xin and Xout and for all intents and purposes 
@@ -267,6 +268,7 @@ while(1){
 			putc(2);
 			putc(58);
 			putc(125);
+			WD_intervalTimerInit();
 			S2 = 0;}
 		break;
 	case 7 :
@@ -288,7 +290,7 @@ while(1){
 	blinky = 0;
 	//S2 = 0;
 	S1 = 0;
-_BIS_SR(LPM0_bits + GIE); // Enter LPM0 w/interrupt
+_BIS_SR(LPM3_bits + GIE); // Enter LPM0 w/interrupt
 }
 }
 
@@ -347,6 +349,7 @@ __interrupt void adc10_tempGetter(void)
 	_low_power_mode_off_on_exit();
 	}
 else{
+	
     temp = ADC10MEM;
     IntDegF = ((temp - 630) * 761) / 1024;
 //	P1IFG &= ~0x08; // P1.3 IFG cleared 
