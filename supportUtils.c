@@ -3,7 +3,7 @@
 
 void WD_intervalTimerInit(void)
 {
-  WDTCTL = WDT_MDLY_32;                    // WDT 250ms, ACLK, interval timer
+  WDTCTL = WDT_ADLY_250;                    // WDT 250ms, ACLK, interval timer
   IE1 |= WDTIE;                             // Enable WDT interrupt
 }
 void delay(unsigned int ms)
