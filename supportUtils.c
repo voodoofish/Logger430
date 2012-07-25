@@ -5,11 +5,38 @@ extern unsigned int memCounter;
 extern const unsigned int CS;
 extern const unsigned short MYPORT;
 extern unsigned short doConversion;
-void WD_intervalTimerInit(void)
-{
-  WDTCTL = WDT_ADLY_250;                    // WDT 250ms, ACLK, interval timer
-  IE1 |= WDTIE;                             // Enable WDT interrupt
+
+void WD_intervalTimerInit(unsigned char interval, unsigned short delay){
+unsigned int currentDelay =0;
+  	switch(delay)
+	{
+	case 1 :
+	currentDelay = WDT_ADLY_1_9;
+	break;
+	case 2 :
+	currentDelay = WDT_ADLY_16;
+	break;
+	case 3 :
+	currentDelay = WDT_ADLY_250;
+	break;
+	case 4 :
+	currentDelay = WDT_ADLY_1000;
+	break;
+	default :
+	__no_operation();
+	}
+	
+	unsigned char i = 0;
+	WDTCTL = currentDelay;
+	for(i=0;i<=interval;i++){
+  	//WDTCTL = WDT_ADLY_250;                    // WDT 250ms, ACLK, interval timer
+  	//WDTCTL = currentDelay;
+  	//IE1 |= WDTIE;
+	_low_power_mode_0();
+	}
+	WDTCTL = WDTPW + WDTHOLD;
 }
+
 void delay(unsigned int ms)
 {
  while (ms--)
