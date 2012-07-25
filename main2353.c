@@ -126,6 +126,8 @@ P2IFG &= ~0x28; // P2.3 and P2.5  IFG cleared
 //Configure SPI IO ports by setting the clock, MOSI and MISO to UCSI mode
 P1SEL |=BIT5 + BIT6 + BIT7; 
 P1SEL2 |=BIT5 + BIT6 + BIT7;
+//enable WDT int
+IE1 |= WDTIE;
 //get spi working
 spiInit();
 spiStop();
@@ -165,14 +167,16 @@ while(1){
 					__no_operation();
 					_low_power_mode_0();
 				
-					unsigned char i;
-					WD_intervalTimerInit();
-					for(i=0;i<=3;i++){
-					_low_power_mode_0();
-					}
+					//unsigned char i;
+					WD_intervalTimerInit(3,3);
+					//for(i=0;i<=3;i++){
+					//_low_power_mode_0();
+					//}
+					
 					//go to LMP and wait for loop to restart
 					//__bis_SR_register_on_exit(LPM0_bits);
-					WDTCTL = WDTPW + WDTHOLD; // Stop watchdog timer and let the rest of the process complete.
+					//WDTCTL = WDTPW + WDTHOLD; //now handled by interval timer function 
+					// Stop watchdog timer and let the rest of the process complete.
 					unsigned char adcdat =0;
 					adcdat =(ADCdata[0])/4;
 					//if (((ADCdata%4)>3)&& adcdat <255 )
@@ -225,7 +229,7 @@ while(1){
 					_low_power_mode_0(); 
 					//go to lpm until the next int
 					}
-				WD_intervalTimerInit();
+				WD_intervalTimerInit(0,3);
 				//go to LMP and wait for loop to restart
 				//__bis_SR_register_on_exit(LPM0_bits);
 				_low_power_mode_0(); 
@@ -269,7 +273,7 @@ while(1){
 				//do post processing of data and save to memChip.
 				//turn on wdt interval timer.
 				//__no_operation();
-				WD_intervalTimerInit();
+				WD_intervalTimerInit(0,3);
 				//go to LMP and wait for loop to restart
 				//__bis_SR_register_on_exit(LPM0_bits);
 				_low_power_mode_0(); 
@@ -304,7 +308,7 @@ while(1){
 			putc(2);
 			putc(58);
 			putc(125);
-			WD_intervalTimerInit();
+			WD_intervalTimerInit(0,3);
 			S2 = 0;}
 		break;
 	case 7 ://Erase the memory chip
