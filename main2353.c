@@ -44,11 +44,11 @@
 #include <stdint.h>
 
 
-#define CS BIT4//p2.4
+const int CS = BIT4;//p2.4
 //SI	P1.7
 //SO	P1.6
 //CLK 	P1.5
-unsigned char MYPORT = 2;
+const unsigned char MYPORT = 2;
  
 unsigned short S1 = 0; //button1/action  Also used as reset button when switch is enabled
 unsigned short S2 = 0; //button2/iterator
@@ -61,8 +61,11 @@ unsigned char statusRg = 0xff;
 unsigned char rxbuff;
 
 unsigned int memCounter = 0;
-unsigned long temp = 0;      
+unsigned long temp = 0;           
 unsigned long IntDegF = 0;
+//for dtc
+
+
 
 //unsigned char toggler = 0x0;
 //unsigned char counter = 0;
@@ -75,7 +78,9 @@ void puts(char *);
 unsigned getc(void);
 
 void main(void)
-{
+{	volatile unsigned int ADCdata[6];
+//	volatile unsigned int *pADCdata;
+//	pADCdata =&ADCdata[0];
 //Configure buttons and CS	
 WDTCTL = WDTPW + WDTHOLD; // Stop watchdog timer
 
@@ -145,8 +150,39 @@ while(1){
 			setpins(0x1);}
 		else
 			{blinkfun();
-			myData = readPageMemLoc(2,CS,MYPORT);
-			myStatus = readStatusReg(CS, MYPORT, RDSR);
+			doConversion = 3;	
+				adcConvert(1);
+		 		delay(100);
+					while(doConversion == 3){
+						if (isPaused ==1){
+						//__bis_SR_register_on_exit(LPM0_bits);
+						_low_power_mode_3(); 
+						//go to lpm until the next int
+						}
+					ADC10SA = (unsigned int)ADCdata; //set memory location for conversion
+					__no_operation();//breakpoint
+					ADC10CTL0 |= ENC + ADC10SC; //enable and start conversion
+					__no_operation();
+					_low_power_mode_0();
+				
+					unsigned char i;
+					WD_intervalTimerInit();
+					for(i=0;i<=3;i++){
+					_low_power_mode_0();
+					}
+					//go to LMP and wait for loop to restart
+					//__bis_SR_register_on_exit(LPM0_bits);
+					WDTCTL = WDTPW + WDTHOLD; // Stop watchdog timer and let the rest of the process complete.
+					unsigned char adcdat =0;
+					adcdat =(ADCdata[0])/4;
+					//if (((ADCdata%4)>3)&& adcdat <255 )
+					//{adcdat++;}
+					wrtiePageLoc(memCounter, adcdat, CS ,MYPORT);
+					//keep looping until register no longer shows write active.
+					while(readStatusReg(CS, MYPORT, RDSR)&0x01==0x01){}; 
+				
+					blinkbit(BIT1,100);
+					}
 			S2 = 0;}
 		break;
 	case 2 :
@@ -208,7 +244,7 @@ while(1){
 			//unsigned char isPaused = 0;
 			//Enable ADC here
 			doConversion = 3;
-			
+			  
 				while (doConversion == 3){
 				//stop WDT here
 				WDTCTL = WDTPW + WDTHOLD;
@@ -271,7 +307,7 @@ while(1){
 			WD_intervalTimerInit();
 			S2 = 0;}
 		break;
-	case 7 :
+	case 7 ://Erase the memory chip
 		if (S1 == 0)	
 			setpins(S2);
 		else
@@ -350,12 +386,13 @@ __interrupt void adc10_tempGetter(void)
 	}
 else{
 	
+/*
     temp = ADC10MEM;
     IntDegF = ((temp - 630) * 761) / 1024;
-//	P1IFG &= ~0x08; // P1.3 IFG cleared 
 	wrtiePageLoc(memCounter, IntDegF, CS ,MYPORT);
 	//keep looping until register no longer shows write active.
 	while(readStatusReg(CS, MYPORT, RDSR)&0x01==0x01){}; 
+*/
 	memCounter++;
 	_low_power_mode_off_on_exit();
 	}
