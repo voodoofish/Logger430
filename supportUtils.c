@@ -1,6 +1,10 @@
-
+#include "25AA.h"
 #include "msp430.h"
 
+extern unsigned int memCounter; 
+extern const unsigned int CS;
+extern const unsigned short MYPORT;
+extern unsigned short doConversion;
 void WD_intervalTimerInit(void)
 {
   WDTCTL = WDT_ADLY_250;                    // WDT 250ms, ACLK, interval timer
@@ -25,12 +29,6 @@ void setpins(unsigned char pins){
 //This does a blink based on the button press
 unsigned char counterLoop=0;
 	while(counterLoop < 3){
-	/*
-	P2OUT |=pins;
-	delay(200);
-	P2OUT &= ~pins;
-	delay(200);
-	*/
 	blinkbit(pins, 150);
 	counterLoop++;
 	}
@@ -51,6 +49,40 @@ char i = 0;
 	blinkbit(BIT4, 150);
 	i++;
 	}
+	}
+
+void adcConvert(unsigned short channels){
+	//BIT0, BIT3, BIT4, BIT10//primary channels
+	//BIT1, BIT2 //secondary channels shared with HW/SW uart pins
+	//TODO add logic for channels var.
+	//TODO add logic for conseq and mode to use. Mode will be a selectable list of options in
+	//a select case fashion.
+	
+	switch(channels){
+	case 1 :
+		ADC10CTL1 = INCH_0 + CONSEQ_0;
+		ADC10DTC1 = 1;
+		ADC10AE0 |= BIT0;
+	break;
+	case 2 :
+		ADC10CTL1 = INCH_3 + CONSEQ_1;
+		ADC10DTC1 = 2;
+		ADC10AE0 |= BIT0 + BIT3;
+	break;
+	case 3 :
+		ADC10CTL1 = INCH_4 + CONSEQ_1;
+		ADC10DTC1 = 3;
+		ADC10AE0 |= BIT0 + BIT3 + BIT4;
+	break;
+	
+	default :
+	__no_operation();	
+	}
+
+	ADC10CTL0 = ADC10SHT_2 + ADC10ON + ADC10IE + REFON + SREF_1;//+ MSC 	// ADC10ON, interrupt enabled
+	//ADC10CTL1 = INCH_0 + CONSEQ_0;//INCH_4;                  	// input A4
+	//ADC10AE0 |= BIT0;//BIT4+BIT5;//0x10;				// PA.4 ADC option select
+	//ADC10DTC1 = 1;//was 6 //this is a reminder boys and girls, don't just copy paste, know that
+	//if you are using conseq_0 it's only going to do a single conversion not n>1
+	//you will be waiting a long time for it to do nothing.
 }
-
-
