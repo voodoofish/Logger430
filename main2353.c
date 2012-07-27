@@ -61,28 +61,25 @@ unsigned char statusRg = 0xff;
 unsigned char rxbuff;
 
 unsigned int memCounter = 0;
-unsigned long temp = 0;           
-unsigned long IntDegF = 0;
-//for dtc
-
-
-
+//unsigned long temp = 0;           
+//unsigned long IntDegF = 0;
 //unsigned char toggler = 0x0;
 //unsigned char counter = 0;
 //unsigned char j=0;
 //volatile unsigned int i;
 //void delay(unsigned int ms);
+
+//soft serial
 void serial_setup(unsigned out_mask, unsigned in_mask, unsigned duration);
 void putc(unsigned);
 void puts(char *);
 unsigned getc(void);
 
 void main(void)
-{	volatile unsigned int ADCdata[6];
-//	volatile unsigned int *pADCdata;
-//	pADCdata =&ADCdata[0];
-//Configure buttons and CS	
-WDTCTL = WDTPW + WDTHOLD; // Stop watchdog timer
+{	//for dtc
+	volatile unsigned int ADCdata[6];
+
+	WDTCTL = WDTPW + WDTHOLD; // Stop watchdog timer
 
 	DCOCTL = 0;
 	BCSCTL1 = CALBC1_1MHZ;
@@ -184,7 +181,7 @@ while(1){
 					wrtiePageLoc(memCounter, adcdat, CS ,MYPORT);
 					//keep looping until register no longer shows write active.
 					while(readStatusReg(CS, MYPORT, RDSR)&0x01==0x01){}; 
-				
+					memCounter++;
 					blinkbit(BIT1,100);
 					}
 			S2 = 0;}
@@ -397,7 +394,7 @@ else{
 	//keep looping until register no longer shows write active.
 	while(readStatusReg(CS, MYPORT, RDSR)&0x01==0x01){}; 
 */
-	memCounter++;
+	//memCounter++;
 	_low_power_mode_off_on_exit();
 	}
 }
