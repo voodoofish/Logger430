@@ -60,9 +60,16 @@ unsigned char myStatus=0x0;
 unsigned char statusRg = 0xff;
 unsigned char rxbuff;
 
-unsigned int memCounter = 0;
-//unsigned long temp = 0;           
-//unsigned long IntDegF = 0;
+unsigned char memstart =0; //start location filled by headerwriter function
+unsigned int memCounter = 0; 
+unsigned int maxmemFinal;
+unsigned char adcdat;
+unsigned short chanCount = 0;
+unsigned short chanLIst[4] = {0,3,4,10};//primary ADC channels
+unsigned char header[8] = {0xA0,0xFF,0,0xFE,0,0,0,0};
+unsigned char *headerptr;
+unsigned long temp = 0;           
+unsigned long IntDegF = 0;
 //unsigned char toggler = 0x0;
 //unsigned char counter = 0;
 //unsigned char j=0;
@@ -77,7 +84,8 @@ unsigned getc(void);
 
 void main(void)
 {	//for dtc
-	volatile unsigned int ADCdata[6];
+	headerptr = header;
+	volatile unsigned int ADCdata[5];
 
 	WDTCTL = WDTPW + WDTHOLD; // Stop watchdog timer
 
@@ -144,13 +152,15 @@ while(1){
 	
 	switch(S2)
 	{
-	case 1 :
+	case 1 : 
 		if (S1 == 0){//if S1 is set, skip the setpins blink and just go to the actual code we'll run.
 			setpins(0x1);}
 		else
 			{blinkfun();
 			doConversion = 3;	
-				adcConvert(1);
+				adcConvert(1);//channel 0 ADC
+				memstart = HeaderWriter(1, 1, headerptr);
+		 		memCounter += (int)memstart; //add the memory write start point
 		 		delay(100);
 					while(doConversion == 3){
 						if (isPaused ==1){
@@ -163,27 +173,20 @@ while(1){
 					ADC10CTL0 |= ENC + ADC10SC; //enable and start conversion
 					__no_operation();
 					_low_power_mode_0();
-				
+					ADC10CTL0 &= ~(ENC);
 					//unsigned char i;
-					WD_intervalTimerInit(3,3);
-					//for(i=0;i<=3;i++){
-					//_low_power_mode_0();
-					//}
-					
-					//go to LMP and wait for loop to restart
-					//__bis_SR_register_on_exit(LPM0_bits);
-					//WDTCTL = WDTPW + WDTHOLD; //now handled by interval timer function 
-					// Stop watchdog timer and let the rest of the process complete.
-					unsigned char adcdat =0;
-					adcdat =(ADCdata[0])/4;
+					WD_intervalTimerInit(1,3);//when set to 2,2, it will do 2 loops@16ms delay.
+					adcdat =0;
+					adcdat =(ADCdata[0])/4;//8 bit mode use /4
 					//if (((ADCdata%4)>3)&& adcdat <255 )
 					//{adcdat++;}
 					wrtiePageLoc(memCounter, adcdat, CS ,MYPORT);
 					//keep looping until register no longer shows write active.
 					while(readStatusReg(CS, MYPORT, RDSR)&0x01==0x01){}; 
 					memCounter++;
-					blinkbit(BIT1,100);
+					blinkbit(BIT1,10);//was 100
 					}
+					endBlink(10);
 			S2 = 0;}
 		break;
 	case 2 :
@@ -191,23 +194,45 @@ while(1){
 			setpins(0x2);}	
 		else
 			{blinkfun();
-			myData = readPageMemLoc(500,CS,MYPORT);
-			//enablePin(CS,MYPORT);
-//			__no_operation(); 
-//			__no_operation(); 
-			//spiTx(WREN); //init the write enable
-			//writeStatusReg(CS, MYPORT, WRSR,0xC);
-//			P2OUT ^=0x4;
-//			__no_operation(); 
-//			__no_operation(); 
-			//disablePin(CS,MYPORT);
-			wrtiePageLoc(500, 55, CS ,MYPORT);
-			while(readStatusReg(CS, MYPORT, RDSR)&0x01==0x01){};
-			//delay(5);
-			//while(readStatusReg(CS, MYPORT, RDSR)&0x01==0x01){};
-			myData = readPageMemLoc(500,CS,MYPORT);
-			//statusRg = readStatusReg(CS, MYPORT, RDSR);//This function just does a read so should work with both status RDSR and RDID
-			//P2OUT ^=0x4;
+			doConversion = 3;	
+				adcConvert(4);
+		 		delay(100);
+					while(doConversion == 3){
+						if (isPaused ==1){
+						//__bis_SR_register_on_exit(LPM0_bits);
+						_low_power_mode_3(); 
+						}
+					ADC10SA = (unsigned int)ADCdata; //set memory location for conversion
+					__no_operation();//breakpoint
+					ADC10CTL0 |= ENC + ADC10SC; //enable and start conversion
+					__no_operation();
+					_low_power_mode_0();
+					//ADC10CTL0 &= ~(ENC);
+					WD_intervalTimerInit(3,3);
+					adcdat = 0;
+					chanCount = 0;
+					//array cell 2 == adc4
+					//array cell 3 == adc0
+					//array cell 1 = adc3?
+					while(chanCount < 4){
+						if (chanLIst[chanCount] > 0){
+							adcdat =(ADCdata[chanLIst[chanCount]])/4;
+							}
+						else
+							{//adcdat = ((ADCdata[chanLIst[chanCount]] - 630) * 761) / 1024;
+						    temp = ADCdata[chanLIst[chanCount]];
+    						IntDegF= ((temp - 630) * 761) / 1024;				 
+							adcdat = (char)IntDegF;}
+						//if (((ADCdata%4)>3)&& adcdat <255 )
+						//{adcdat++;}
+						wrtiePageLoc(memCounter, adcdat, CS ,MYPORT);
+						while(readStatusReg(CS, MYPORT, RDSR)&0x01==0x01){}; 
+						memCounter++;
+						blinkbit(BIT1,100);
+						chanCount++;
+						}
+					}
+					endBlink(10);
 			S2 = 0;}
 		break;
 	case 3 :
@@ -239,13 +264,39 @@ while(1){
 			setpins(S2);
 		else
 			{blinkfun();
-			//Button loop logic
-			//two new vars
-			//unsigned char doConversion =0;
-			//unsigned char isPaused = 0;
-			//Enable ADC here
 			doConversion = 3;
-			  
+//				/*
+				adcConvert(5);
+				delay(100);
+					while(doConversion == 3){
+						if (isPaused ==1){
+						//__bis_SR_register_on_exit(LPM0_bits);
+						_low_power_mode_3(); 
+						//go to lpm until the next int
+						}
+					ADC10SA = (unsigned int)ADCdata; //set memory location for conversion
+					__no_operation();//breakpoint
+					ADC10CTL0 |= ENC + ADC10SC; //enable and start conversion
+					__no_operation();
+					_low_power_mode_0();
+					ADC10CTL0 &= ~(ENC);
+					//if this stalls, check to see that conseq is set to the correct value and see if msc is causing issues.
+					//unsigned char i;
+					WD_intervalTimerInit(3,1);
+				    temp = (long)ADCdata[chanLIst[0]];
+    				IntDegF= ((temp - 630) * 761) / 1024;				 
+					adcdat = (char)IntDegF;
+					//if (((ADCdata%4)>3)&& adcdat <255 )
+					//{adcdat++;}
+					wrtiePageLoc(memCounter, adcdat, CS ,MYPORT);
+					//keep looping until register no longer shows write active.
+					while(readStatusReg(CS, MYPORT, RDSR)&0x01==0x01){}; 
+					memCounter++;
+					blinkbit(BIT1,100);
+					}
+					endBlink(10);
+//					*/
+/*
 				while (doConversion == 3){
 				//stop WDT here
 				WDTCTL = WDTPW + WDTHOLD;
@@ -273,12 +324,16 @@ while(1){
 				WD_intervalTimerInit(0,3);
 				//go to LMP and wait for loop to restart
 				//__bis_SR_register_on_exit(LPM0_bits);
-				_low_power_mode_0(); 
+				//_low_power_mode_0();
+			    temp = ADC10MEM;
+    			IntDegF= ((temp - 630) * 761) / 1024;				 
+				adcdat = (char)IntDegF;
 				blinkbit(BIT1,100);
 				} //end loop
 			//Disable ADC here
 			ADC10CTL0 &= ~(ENC + ADC10SC);
 				endBlink(10);
+*/
 			S2 = 0;}
 		break;
 	case 5 :
@@ -380,9 +435,10 @@ __interrupt void watchdog_timer(void)
 
 #pragma vector=ADC10_VECTOR
 __interrupt void adc10_tempGetter(void)
-{if (memCounter >= MAXMEM)//was MAXMEM
+{if (memCounter >= (MAXMEM))//was MAXMEM
 	{//WDTCTL = WDTPW + WDTHOLD; // Stop watchdog timer
 	doConversion = 0;
+	ADC10CTL0 &= ~(ENC + ADC10SC);
 	_low_power_mode_off_on_exit();
 	}
 else{
